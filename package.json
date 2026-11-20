@@ -1,0 +1,27 @@
+{
+  "name": "nemar-doi",
+  "description": "NEMAR DOI registry: every DOI NEMAR issues, and the doi.nemar.org page",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.4",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nemarOrg/nemar-doi"
+  },
+  "scripts": {
+    "validate": "bun run scripts/validate.ts",
+    "transitions": "bun run scripts/check-transitions.ts",
+    "schema": "bun run scripts/gen-schema.ts",
+    "lint": "biome ci .",
+    "format": "biome check --write .",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.8",
+    "@types/bun": "1.4.5",
+    "typescript": "7.0.2",
+    "zod": "4.6.7"
+  }
+}
