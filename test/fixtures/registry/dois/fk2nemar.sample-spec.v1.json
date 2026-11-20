@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "doi": "10.5072/fk2nemar.sample-spec.v1",
+  "state": "public",
+  "target": "https://doi-test.nemar.org/10.5072/fk2nemar.sample-spec.v1",
+  "source": {
+    "repository": "nemarOrg/nemar-doi"
+  },
+  "datacite": {
+    "titles": [{ "title": "Sample specification, version 1" }],
+    "publisher": "NEMAR (Neuroelectromagnetic Data Archive and Tools Resource)",
+    "types": {
+      "resourceTypeGeneral": "Standard",
+      "resourceType": "Format specification"
+    },
+    "creators": [
+      {
+        "nameType": "Personal",
+        "name": "Carberry, Josiah",
+        "givenName": "Josiah",
+        "familyName": "Carberry",
+        "nameIdentifiers": [
+          {
+            "nameIdentifier": "https://orcid.org/0000-0002-1825-0097",
+            "nameIdentifierScheme": "ORCID",
+            "schemeUri": "https://orcid.org"
+          }
+        ]
+      },
+      {
+        "nameType": "Organizational",
+        "name": "The sample specification contributors"
+      }
+    ],
+    "publicationYear": 2026,
+    "descriptions": [
+      {
+        "description": "A record on the EZID test shoulder that the registry's tests read.",
+        "descriptionType": "Abstract"
+      }
+    ],
+    "rightsList": [
+      {
+        "rights": "Creative Commons Attribution 4.0 International",
+        "rightsUri": "https://creativecommons.org/licenses/by/4.0/legalcode",
+        "rightsIdentifier": "CC-BY-4.0",
+        "rightsIdentifierScheme": "SPDX"
+      }
+    ]
+  },
+  "registered": {
+    "ezid_identifier": "doi:10.5072/FK2NEMAR.SAMPLE-SPEC.V1",
+    "reserved_at": "2026-11-20T20:00:00Z",
+    "public_at": "2026-11-20T20:05:00Z",
+    "metadata_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

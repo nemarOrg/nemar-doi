@@ -1,0 +1,556 @@
+{
+  "$id": "https://doi.nemar.org/schema/doi-record.schema.json",
+  "title": "NEMAR DOI registry record",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "number",
+      "const": 1
+    },
+    "doi": {
+      "type": "string",
+      "minLength": 1
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "reserved",
+        "public",
+        "unavailable"
+      ]
+    },
+    "target": {
+      "type": "string",
+      "format": "uri"
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$"
+        },
+        "tag": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        }
+      },
+      "required": [
+        "repository"
+      ],
+      "additionalProperties": false
+    },
+    "datacite": {
+      "type": "object",
+      "properties": {
+        "titles": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "title"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "publisher": {
+          "type": "string",
+          "const": "NEMAR (Neuroelectromagnetic Data Archive and Tools Resource)"
+        },
+        "types": {
+          "type": "object",
+          "properties": {
+            "resourceTypeGeneral": {
+              "type": "string",
+              "enum": [
+                "Standard",
+                "Software"
+              ]
+            },
+            "resourceType": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "resourceTypeGeneral",
+            "resourceType"
+          ],
+          "additionalProperties": false
+        },
+        "creators": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "nameType": {
+                    "type": "string",
+                    "const": "Personal"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "givenName": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "familyName": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "nameIdentifiers": {
+                    "maxItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "nameIdentifier": {
+                          "type": "string",
+                          "pattern": "^https:\\/\\/orcid\\.org\\/\\d{4}-\\d{4}-\\d{4}-\\d{3}[\\dX]$"
+                        },
+                        "nameIdentifierScheme": {
+                          "type": "string",
+                          "const": "ORCID"
+                        },
+                        "schemeUri": {
+                          "type": "string",
+                          "const": "https://orcid.org"
+                        }
+                      },
+                      "required": [
+                        "nameIdentifier",
+                        "nameIdentifierScheme",
+                        "schemeUri"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "affiliation": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "nameType",
+                  "name",
+                  "givenName",
+                  "familyName"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "nameType": {
+                    "type": "string",
+                    "const": "Organizational"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "nameIdentifiers": {
+                    "maxItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "nameIdentifier": {
+                          "type": "string",
+                          "pattern": "^https:\\/\\/ror\\.org\\/0[a-z0-9]{8}$"
+                        },
+                        "nameIdentifierScheme": {
+                          "type": "string",
+                          "const": "ROR"
+                        },
+                        "schemeUri": {
+                          "type": "string",
+                          "const": "https://ror.org"
+                        }
+                      },
+                      "required": [
+                        "nameIdentifier",
+                        "nameIdentifierScheme",
+                        "schemeUri"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "nameType",
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "publicationYear": {
+          "type": "integer",
+          "minimum": 2020,
+          "maximum": 2100
+        },
+        "descriptions": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "description": {
+                "type": "string",
+                "minLength": 1
+              },
+              "descriptionType": {
+                "type": "string",
+                "enum": [
+                  "Abstract",
+                  "TechnicalInfo",
+                  "Other"
+                ]
+              }
+            },
+            "required": [
+              "description",
+              "descriptionType"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "rightsList": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "rights": {
+                "type": "string",
+                "minLength": 1
+              },
+              "rightsUri": {
+                "type": "string",
+                "format": "uri"
+              },
+              "rightsIdentifier": {
+                "type": "string",
+                "minLength": 1
+              },
+              "rightsIdentifierScheme": {
+                "type": "string",
+                "const": "SPDX"
+              }
+            },
+            "required": [
+              "rights",
+              "rightsUri",
+              "rightsIdentifier",
+              "rightsIdentifierScheme"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "subjects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "subject": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "subject"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "contributors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "contributor": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "nameType": {
+                        "type": "string",
+                        "const": "Personal"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "givenName": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "familyName": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "nameIdentifiers": {
+                        "maxItems": 1,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "nameIdentifier": {
+                              "type": "string",
+                              "pattern": "^https:\\/\\/orcid\\.org\\/\\d{4}-\\d{4}-\\d{4}-\\d{3}[\\dX]$"
+                            },
+                            "nameIdentifierScheme": {
+                              "type": "string",
+                              "const": "ORCID"
+                            },
+                            "schemeUri": {
+                              "type": "string",
+                              "const": "https://orcid.org"
+                            }
+                          },
+                          "required": [
+                            "nameIdentifier",
+                            "nameIdentifierScheme",
+                            "schemeUri"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "affiliation": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "required": [
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "nameType",
+                      "name",
+                      "givenName",
+                      "familyName"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "nameType": {
+                        "type": "string",
+                        "const": "Organizational"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "nameIdentifiers": {
+                        "maxItems": 1,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "nameIdentifier": {
+                              "type": "string",
+                              "pattern": "^https:\\/\\/ror\\.org\\/0[a-z0-9]{8}$"
+                            },
+                            "nameIdentifierScheme": {
+                              "type": "string",
+                              "const": "ROR"
+                            },
+                            "schemeUri": {
+                              "type": "string",
+                              "const": "https://ror.org"
+                            }
+                          },
+                          "required": [
+                            "nameIdentifier",
+                            "nameIdentifierScheme",
+                            "schemeUri"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "nameType",
+                      "name"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "contributorType": {
+                "type": "string",
+                "enum": [
+                  "ContactPerson",
+                  "Editor",
+                  "ProjectLeader",
+                  "Other"
+                ]
+              }
+            },
+            "required": [
+              "contributor",
+              "contributorType"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "relatedIdentifiers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "relatedIdentifier": {
+                "type": "string",
+                "minLength": 1
+              },
+              "relatedIdentifierType": {
+                "type": "string",
+                "enum": [
+                  "DOI",
+                  "URL"
+                ]
+              },
+              "relationType": {
+                "type": "string",
+                "enum": [
+                  "IsDocumentedBy",
+                  "Documents",
+                  "IsDescribedBy",
+                  "Describes",
+                  "IsSupplementTo",
+                  "IsSupplementedBy",
+                  "IsReferencedBy",
+                  "References",
+                  "IsRequiredBy",
+                  "Requires",
+                  "IsDerivedFrom",
+                  "IsSourceOf",
+                  "IsPartOf",
+                  "HasPart",
+                  "IsIdenticalTo",
+                  "Obsoletes",
+                  "IsObsoletedBy"
+                ]
+              }
+            },
+            "required": [
+              "relatedIdentifier",
+              "relatedIdentifierType",
+              "relationType"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "titles",
+        "publisher",
+        "types"
+      ],
+      "additionalProperties": false
+    },
+    "registered": {
+      "type": "object",
+      "properties": {
+        "ezid_identifier": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reserved_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        },
+        "public_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        },
+        "metadata_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "ezid_identifier",
+        "reserved_at",
+        "metadata_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "unavailable": {
+      "type": "object",
+      "properties": {
+        "since": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "since",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "note": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "doi",
+    "state",
+    "target",
+    "source",
+    "datacite"
+  ],
+  "additionalProperties": false
+}
