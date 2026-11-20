@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "doi": "10.82901/nemar.process.v0",
+  "state": "planned",
+  "target": "https://doi.nemar.org/10.82901/nemar.process.v0",
+  "source": {
+    "repository": "nemarOrg/nemar-process"
+  },
+  "datacite": {
+    "titles": [{ "title": "nemar-process, version 0" }],
+    "publisher": "NEMAR (Neuroelectromagnetic Data Archive and Tools Resource)",
+    "types": {
+      "resourceTypeGeneral": "Software",
+      "resourceType": "Processing software"
+    }
+  },
+  "note": "Planned on the owner's direction of 2026-11-20. Nothing exists at EZID. nemar-process was at 0.1.0 with no release tag on that date; whether its first DOI is this 0.x line or nemar.process.v1 is the owner's decision, and a planned record can still be renamed. The request pull request fills in the creators, year, abstract and license."
+}

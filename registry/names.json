@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "delegations": [
+    {
+      "space": "dataset",
+      "name_pattern": "^[a-z]+[0-9]+$",
+      "registry": "nemar-cli",
+      "repository": "nemarOrg/nemar-cli",
+      "list_url": "https://api.nemar.org/datasets?has_doi=true",
+      "note": "Dataset DOIs (the nm and on prefixes today) are minted and recorded by nemar-cli. This registry holds no copy of them; doi.nemar.org lists them live from list_url."
+    }
+  ],
+  "reserved": ["nemar", "doi", "dataset", "datasets", "test", "sandbox", "example"],
+  "names": {
+    "biosig-zarr": {
+      "title": "biosig-zarr format specification",
+      "kind": "specification",
+      "repository": "nemarOrg/biosig-zarr"
+    },
+    "process": {
+      "title": "nemar-process",
+      "kind": "software",
+      "repository": "nemarOrg/nemar-process"
+    }
+  }
+}
