@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "delegations": [
+    {
+      "space": "dataset",
+      "name_pattern": "^[a-z]+[0-9]+$",
+      "registry": "nemar-cli",
+      "repository": "nemarOrg/nemar-cli",
+      "list_url": "https://api-test.nemar.org/datasets?has_doi=true"
+    }
+  ],
+  "reserved": ["nemar", "doi"],
+  "names": {
+    "sample-spec": {
+      "title": "A specification that exists only in tests",
+      "kind": "specification",
+      "repository": "nemarOrg/nemar-doi"
+    }
+  }
+}

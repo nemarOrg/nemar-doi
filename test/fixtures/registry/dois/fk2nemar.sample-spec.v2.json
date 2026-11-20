@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "doi": "10.5072/fk2nemar.sample-spec.v2",
+  "state": "planned",
+  "target": "https://doi-test.nemar.org/10.5072/fk2nemar.sample-spec.v2",
+  "source": {
+    "repository": "nemarOrg/nemar-doi"
+  },
+  "datacite": {
+    "titles": [
+      {
+        "title": "Sample specification, version 2"
+      }
+    ],
+    "publisher": "NEMAR (Neuroelectromagnetic Data Archive and Tools Resource)",
+    "types": {
+      "resourceTypeGeneral": "Standard",
+      "resourceType": "Format specification"
+    }
+  }
+}

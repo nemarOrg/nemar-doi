@@ -1,0 +1,98 @@
+{
+  "$id": "https://doi.nemar.org/schema/names.schema.json",
+  "title": "NEMAR DOI registry name table",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "number",
+      "const": 1
+    },
+    "delegations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "space": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name_pattern": {
+            "type": "string",
+            "minLength": 1
+          },
+          "registry": {
+            "type": "string",
+            "minLength": 1
+          },
+          "repository": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$"
+          },
+          "list_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "space",
+          "name_pattern",
+          "registry",
+          "repository",
+          "list_url"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "reserved": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "names": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "specification",
+              "software"
+            ]
+          },
+          "repository": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$"
+          }
+        },
+        "required": [
+          "title",
+          "kind",
+          "repository"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "delegations",
+    "reserved",
+    "names"
+  ],
+  "additionalProperties": false
+}
