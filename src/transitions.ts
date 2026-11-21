@@ -7,6 +7,7 @@
  * Pure functions over parsed files; `scripts/check-transitions.ts` feeds them from git.
  */
 import { z } from "zod";
+import { lineDoiOf, parseDoi } from "./doi";
 import { isIssued, RECORDS_DIR, type RegistryFile, stateRank } from "./registry";
 import { recordSchema, STATES } from "./schema";
 
@@ -34,10 +35,85 @@ export type Seen = z.infer<typeof leniently>;
 
 export interface TransitionOptions {
   /**
-   * DOIs the mint run may take from absent or `planned` to `reserved` or `public`.
-   * Nothing else may: a record enters the registry as `planned` and a person reads it (ADR 0005).
+   * What the mint run may take from `planned` to `reserved` or `public`: one release DOI and,
+   * with it, that release's own line DOI (ADR 0003: a line is registered with its first release).
+   * Each must be `planned` at the base and may change in no field except `state` and `registered`.
+   * Nothing else may be issued: a record enters as `planned` and a person reads it (ADR 0005).
+   * No CI job passes this; only the mint workflow does, when it exists.
    */
   allowIssue?: string[];
+}
+
+/** Key-order-independent text of a JSON value, so two records compare field by field. */
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
+      a < b ? -1 : 1,
+    );
+    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function withoutIssue(raw: unknown): string {
+  const {
+    state: _state,
+    registered: _registered,
+    ...rest
+  } = (raw ?? {}) as Record<string, unknown>;
+  return canonical(rest);
+}
+
+/**
+ * Which of the requested DOIs the mint run may really issue, and why any other is refused.
+ * The shape is fixed: one release, or one release with its own line. A lone line is refused
+ * because a line is never registered without its first release (ADR 0003).
+ */
+function allowance(
+  requested: string[],
+  before: Map<string, { raw: unknown; state: string }>,
+  after: Map<string, { raw: unknown }>,
+): { allowed: Set<string>; problems: string[] } {
+  if (requested.length === 0) return { allowed: new Set(), problems: [] };
+  const refuse = (message: string) => ({ allowed: new Set<string>(), problems: [message] });
+
+  const values = [];
+  for (const doi of requested) {
+    const result = parseDoi(doi);
+    if (!result.ok) return refuse(`--allow-issue: ${result.error}`);
+    values.push(result.value);
+  }
+  const releases = values.filter((value) => value.level === "release");
+  const lines = values.filter((value) => value.level === "line");
+  const [release] = releases;
+  const [line] = lines;
+  if (
+    !release ||
+    releases.length !== 1 ||
+    lines.length > 1 ||
+    values.length !== releases.length + lines.length ||
+    (line && line.doi !== lineDoiOf(release))
+  ) {
+    return refuse(
+      "--allow-issue takes one release DOI, and with it that release's own line DOI, and nothing else",
+    );
+  }
+  for (const doi of requested) {
+    const was = before.get(doi);
+    if (was?.state !== "planned") {
+      return refuse(
+        `--allow-issue ${doi}: it must be planned in the base revision, not ${was ? was.state : "absent"}`,
+      );
+    }
+    const now = after.get(doi);
+    if (now && withoutIssue(now.raw) !== withoutIssue(was.raw)) {
+      return refuse(
+        `--allow-issue ${doi}: the mint run may change only state and registered, and this record differs in another field`,
+      );
+    }
+  }
+  return { allowed: new Set(requested), problems: [] };
 }
 
 const isRecordFile = (file: string) => file.startsWith(`${RECORDS_DIR}/`) && file.endsWith(".json");
@@ -107,24 +183,24 @@ export function checkTransitions(
   options: TransitionOptions = {},
 ): { problems: string[]; registered: number } {
   const problems: string[] = [];
-  const allowed = new Set(options.allowIssue ?? []);
-
-  const before = new Map<string, { file: string; seen: Seen }>();
+  const before = new Map<string, { file: string; seen: Seen; raw: unknown }>();
   for (const { file, text } of base) {
     if (!isRecordFile(file)) continue;
     let seen: Seen;
+    let raw: unknown;
     try {
-      seen = leniently.parse(JSON.parse(text));
+      raw = JSON.parse(text);
+      seen = leniently.parse(raw);
     } catch (error) {
       problems.push(
         `${file} at the base revision cannot be read, so it cannot be judged: ${error}`,
       );
       continue;
     }
-    before.set(seen.doi, { file, seen });
+    before.set(seen.doi, { file, seen, raw });
   }
 
-  const after = new Map<string, { file: string; seen: Seen; strict: boolean }>();
+  const after = new Map<string, { file: string; seen: Seen; strict: boolean; raw: unknown }>();
   const unreadable = new Set<string>();
   for (const { file, json } of head) {
     if (!isRecordFile(file)) continue;
@@ -137,8 +213,16 @@ export function checkTransitions(
       file,
       seen: seen.data,
       strict: recordSchema.safeParse(json).success,
+      raw: json,
     });
   }
+
+  const { allowed, problems: refused } = allowance(
+    options.allowIssue ?? [],
+    new Map([...before].map(([doi, { raw, seen }]) => [doi, { raw, state: seen.state }])),
+    after,
+  );
+  problems.push(...refused);
 
   let registered = 0;
   for (const [doi, { file, seen }] of before) {
