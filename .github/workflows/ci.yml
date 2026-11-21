@@ -38,8 +38,33 @@ jobs:
       - run: bun run test
       - run: bun run schema --check
       - run: bun run validate
-      # No registered DOI is deleted, renamed, rewound or reassigned (ADR 0004).
-      - if: github.event_name == 'pull_request'
-        run: bun run transitions "origin/${BASE_REF}"
+      # No registered DOI is deleted, renamed, rewound or reassigned, and none is issued by hand
+      # (ADR 0004, ADR 0005). Only the mint run's own result may take a record from planned to
+      # issued: a pull request from the branch mint/<suffix> opened by github-actions[bot], or the
+      # push that merges it, whose subject is "Mint <doi>". Everything else is refused.
+      - name: Transitions
         env:
+          EVENT: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          ACTOR: ${{ github.actor }}
+          BEFORE: ${{ github.event.before }}
+          SUBJECT: ${{ github.event.head_commit.message }}
+        run: |
+          allow=()
+          if [ "$EVENT" = "pull_request" ]; then
+            base="origin/${BASE_REF}"
+            case "$HEAD_REF" in
+              mint/*) [ "$ACTOR" = "github-actions[bot]" ] && allow=(--allow-issue "10.82901/${HEAD_REF#mint/}") ;;
+            esac
+          else
+            base="$BEFORE"
+            case "$(printf '%s' "$SUBJECT" | head -n 1)" in
+              "Mint 10.82901/"*) allow=(--allow-issue "$(printf '%s' "$SUBJECT" | head -n 1 | cut -d' ' -f2)") ;;
+            esac
+          fi
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            echo "no base revision: nothing to compare"
+          else
+            bun run transitions "$base" "${allow[@]}"
+          fi
