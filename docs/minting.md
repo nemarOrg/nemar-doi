@@ -25,6 +25,8 @@ Steps 4 to 6 describe a tool that is planned ([`.context/plan.md`](../.context/p
    The format is in [`registry-format.md`](registry-format.md).
 3. **Review.**
    Continuous integration runs `bun run validate` and `bun run transitions`.
+   `transitions` also refuses a record that arrives already `reserved` or `public`, or is edited to that state by hand:
+   only the mint run's own result may issue a record (it passes `--allow-issue <doi>`; see below).
    The reviewer checks what a machine cannot (the list below), then the pull request is merged.
    Merging mints nothing.
 4. **Check that the record is ready.**
@@ -39,7 +41,9 @@ Steps 4 to 6 describe a tool that is planned ([`.context/plan.md`](../.context/p
    5. makes it public: `POST /id/...` with `_status: public`;
    6. for a release, re-sends the document of its line and of the release before it, which now gain a relation.
 6. **Record the result.**
-   The run opens a pull request that sets the record to `public` and writes its `registered` block.
+   The run opens a pull request from the branch `mint/<suffix>` that sets the record to `public` and writes its `registered` block.
+   Continuous integration lets that one DOI move from `planned` to issued only when the pull request comes from that branch and from `github-actions[bot]`,
+   or, after the merge, when the commit subject is `Mint <doi>`.
    The reviewer merges it after confirming that `https://doi.org/<doi>` resolves to the record's page.
 
 ## What the reviewer checks
@@ -49,6 +53,10 @@ Steps 4 to 6 describe a tool that is planned ([`.context/plan.md`](../.context/p
 - Every creator agreed to be listed, and each person is cited by the name they publish under, with their Open Researcher and Contributor ID (ORCID) iD if they have one.
   Nobody is cited by a login handle (nemar-cli ADR 0041).
 - The license is the one in the source repository at that commit.
+- **The creators match the source repository's citation file.**
+  Each creator is a person listed in the `CITATION.cff` of the source repository at the tagged commit (owner decision of 2026-11-21), by the name they publish under;
+  an organization appears only where no person can be named.
+  Do not add or drop a creator the file does not name.
 - The name, if new, is one NEMAR is willing to see in citations for good, and the owner has said so.
 - Nothing in the record is confidential: the repository is public.
 
@@ -62,8 +70,9 @@ Steps 4 to 6 describe a tool that is planned ([`.context/plan.md`](../.context/p
 - **It is safe to run again.**
   If the identifier already exists, the tool reads it and continues from the state it finds; it never creates a second one.
 - **Credentials follow the DOI.**
-  A `10.5072/fk2` DOI uses EZID's test account; a `10.82901` DOI uses the registry's production account,
-  which is available only to the protected environment (ADR 0006).
+  A `10.5072/fk2` DOI uses EZID's test account, held in the environment `ezid-test`;
+  a `10.82901` DOI uses NEMAR's one production credential, held only in the environment `ezid-production`, which the owner approves (ADR 0006, ADR 0008).
+  The production credential is never in `ezid-test`, and the test account is never in `ezid-production`.
 - **Every value sent to EZID is escaped.**
   EZID's request format needs `%`, line feeds and carriage returns percent-encoded,
   and forgetting it corrupts metadata silently (nemar-cli ADR 0007).

@@ -15,7 +15,7 @@ NEMAR issues DOIs under the prefix `10.82901`, through EZID.
 
 This is the design and the registry format.
 **No DOI has been minted from this repository**, nothing here contacts EZID, and doi.nemar.org is not deployed yet.
-The two records in the registry are `planned`: they announce a name and are not DOIs.
+The four records in the registry are `planned`: they announce a name and are not DOIs.
 
 ## A DOI from this registry
 

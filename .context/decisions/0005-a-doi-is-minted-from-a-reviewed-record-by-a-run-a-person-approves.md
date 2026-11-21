@@ -21,6 +21,7 @@ so it can afford the stricter rule that ADR 0018 set aside only for its cost: a 
   The record must pass the schema, carry every property DataCite requires plus an abstract and a license,
   name a tag and a commit if it is a release, and resolve to a page that is already live.
   A person is cited by given and family name, with an Open Researcher and Contributor ID (ORCID) iD where they have one, or not at all (nemar-cli ADR 0041).
+  The creators are the people named in the source repository's `CITATION.cff` at the tagged commit (owner decision of 2026-11-21), and an organization only where no person can be named.
 - **Minting is a separate, deliberate act.**
   A run that a named person approves mints exactly one DOI, from the record as it stands on `main`:
   it creates the identifier as `reserved`, reads it back, compares it with what it sent, and only then makes it `public`.
