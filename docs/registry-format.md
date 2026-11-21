@@ -95,7 +95,7 @@ From `reserved` on a record is never deleted, renamed or moved to another file, 
 Its descriptive metadata can still be corrected by pull request.
 A withdrawn DOI is `public` again only with a new `reinstated` block (`on` and `reason`), which only the owner should approve.
 A record enters the registry as `planned`: one that arrives already `reserved` or `public`, or is edited to that by hand, is refused.
-Only the mint run's own result may issue a record.
+Only the mint workflow may issue a record, and CI never allows it; the workflow does not exist yet, so nothing can be issued today.
 `bun run transitions <base>` compares the working tree with a base revision, reading the base records leniently so a stricter schema cannot lock out an old one, and fails on a change that breaks this.
 Continuous integration runs it on every pull request and on every push to `main`.
 

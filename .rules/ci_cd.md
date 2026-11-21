@@ -17,7 +17,8 @@ and `transitions` against the base revision, on a pull request and on a push to 
 - Actions are pinned by commit, with the version in a comment.
 - Superseded runs are canceled, and the job has a timeout.
 - A pull request never gets `pull_request_target`.
-- `transitions` also refuses a record issued by hand. Only the mint run's result, from the branch `mint/<suffix>` by `github-actions[bot]` or a commit titled `Mint <doi>`, may take a record from `planned` to issued.
+- `transitions` also refuses a record issued by hand, and **CI never allows issuance**: it never passes `--allow-issue`, on a pull request or on a push. Only the mint workflow (not built yet; a dedicated GitHub App identity, a branch of this repository, one verified commit authored by the App) runs `transitions --allow-issue` itself and pushes through its own path. Until then nothing can be issued.
+- A push to `main` is never canceled and has its own concurrency group, so every before-to-after range is checked.
 - Do not weaken a check to get a change through. A failing `transitions` means the change would delete or reassign a registered Digital Object Identifier (DOI).
 
 ## Deploying

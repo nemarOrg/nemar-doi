@@ -29,6 +29,11 @@ so it can afford the stricter rule that ADR 0018 set aside only for its cost: a 
 - **No unattended job can mint.**
   No workflow that starts on a schedule, a push, a merge, a tag or a call from another repository may hold or use EZID credentials.
 - **The result comes back as a pull request** that sets the record's state and its `registered` block.
+- **Continuous integration never allows issuance.**
+  Its `transitions` check refuses any record that becomes `reserved` or `public` in a change, on a pull request and on a push.
+  Only the mint workflow may pass `transitions --allow-issue` (one release DOI and its own line DOI, each `planned` at the base and changed in no field but `state` and `registered`), and it runs the check itself.
+  That workflow is designed with the minting tool: a dedicated GitHub App identity, a branch of this repository, and one verified commit authored by the App.
+  Until it exists, nothing can be issued.
 
 The procedure is in [`docs/minting.md`](../../docs/minting.md).
 No code in this repository contacts EZID yet.
