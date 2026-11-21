@@ -5,7 +5,7 @@ Continuous integration (CI) is one workflow, `.github/workflows/ci.yml`, with on
 ## What it runs
 
 `bun install --frozen-lockfile`, then `lint`, `typecheck`, `test`, `schema --check`, `validate`,
-and on a pull request `transitions` against the base branch.
+and `transitions` against the base revision, on a pull request and on a push to `main`.
 
 ## Rules
 
@@ -17,6 +17,7 @@ and on a pull request `transitions` against the base branch.
 - Actions are pinned by commit, with the version in a comment.
 - Superseded runs are canceled, and the job has a timeout.
 - A pull request never gets `pull_request_target`.
+- `transitions` also refuses a record issued by hand. Only the mint run's result, from the branch `mint/<suffix>` by `github-actions[bot]` or a commit titled `Mint <doi>`, may take a record from `planned` to issued.
 - Do not weaken a check to get a change through. A failing `transitions` means the change would delete or reassign a registered Digital Object Identifier (DOI).
 
 ## Deploying

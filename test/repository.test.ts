@@ -49,7 +49,7 @@ test("the validate command passes on the registry and reports a planned record a
 
 test("the transitions command reads a base revision", async () => {
   const head = await run("bun", "run", "scripts/check-transitions.ts", "HEAD");
-  expect(head.output).toContain("no registered DOI is deleted or rewound");
+  expect(head.output).toContain("none is deleted, rewound or reassigned");
   expect(head.code).toBe(0);
   const missing = await run("bun", "run", "scripts/check-transitions.ts", "no-such-revision");
   expect(missing.code).not.toBe(0);
