@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "doi": "10.82901/nemar.biosig-zarr.v2",
+  "state": "planned",
+  "target": "https://doi.nemar.org/10.82901/nemar.biosig-zarr.v2",
+  "source": {
+    "repository": "nemarOrg/biosig-zarr"
+  },
+  "datacite": {
+    "titles": [
+      {
+        "title": "biosig-zarr format, version 2"
+      }
+    ],
+    "publisher": "NEMAR (Neuroelectromagnetic Data Archive and Tools Resource)",
+    "types": {
+      "resourceTypeGeneral": "Standard",
+      "resourceType": "Format specification"
+    }
+  },
+  "note": "Planned on the owner's decision of 2026-11-21: format version 2 is what NEMAR's stores use today, so it is registered first. Nothing exists at EZID and nothing is minted. This is the line; it is registered together with its first release, nemar.biosig-zarr.v2.0.0. The request pull request fills in the creators, year, abstract and license."
+}

@@ -7,12 +7,16 @@
     "repository": "nemarOrg/biosig-zarr"
   },
   "datacite": {
-    "titles": [{ "title": "biosig-zarr format, version 3" }],
+    "titles": [
+      {
+        "title": "biosig-zarr format, version 3"
+      }
+    ],
     "publisher": "NEMAR (Neuroelectromagnetic Data Archive and Tools Resource)",
     "types": {
       "resourceTypeGeneral": "Standard",
       "resourceType": "Format specification"
     }
   },
-  "note": "Planned on the owner's direction of 2026-11-20. Nothing exists at EZID. Format version 3 is still a proposal, so this is not minted before it is accepted and 3.0.0 is released. The request pull request fills in the creators, year, abstract and license."
+  "note": "Planned on the owner's direction of 2026-11-20. Nothing exists at EZID. Format version 3 is still a proposal (RFC-0001): on 2026-11-21 the owner decided it is not minted before RFC-0001 is accepted and 3.0.0 is released. The request pull request fills in the creators, year, abstract and license."
 }
