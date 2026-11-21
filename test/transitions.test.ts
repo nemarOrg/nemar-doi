@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { cp, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ezidIdentifier } from "../src/doi";
 import { checkTransitions, type Seen, transitionProblems } from "../src/transitions";
 
 const root = join(import.meta.dir, "..");
@@ -29,7 +30,31 @@ async function run(cwd: string, ...command: string[]): Promise<{ code: number; o
   return { code, output: out + err };
 }
 
+const NEXT_RELEASE_DOI = "10.5072/fk2nemar.sample-spec.v2.0.0";
+const NEXT_RELEASE = "registry/dois/fk2nemar.sample-spec.v2.0.0.json";
+
 let dir = "";
+
+/** A base in which the planned line v2 has a planned first release, v2.0.0, as a request would add them. */
+async function plannedPair(): Promise<void> {
+  await cp(join(dir, RELEASE), join(dir, NEXT_RELEASE));
+  await edit(NEXT_RELEASE, (json) => {
+    json.doi = NEXT_RELEASE_DOI;
+    json.target = `https://doi-test.nemar.org/${NEXT_RELEASE_DOI}`;
+    json.state = "planned";
+    delete json.registered;
+    (json.source as Json).tag = "2.0.0";
+  });
+}
+
+/** Take a planned record to public the way the mint run would: state and registered only. */
+async function issue(path: string, doi: string): Promise<void> {
+  const registered = JSON.parse(await readFile(join(dir, LINE), "utf8")).registered as Json;
+  await edit(path, (json) => {
+    json.state = "public";
+    json.registered = { ...registered, ezid_identifier: ezidIdentifier(doi) };
+  });
+}
 
 /** A repository whose base commit is the fixture registry: two public records and a planned one. */
 async function baseRepo(prepare?: (dir: string) => Promise<void>): Promise<void> {
@@ -199,23 +224,135 @@ describe("the transitions script, on a repository with history", () => {
     expect(result.code).toBe(1);
   });
 
-  test("a planned record edited to public by hand is refused, and the mint run may do it", async () => {
-    await baseRepo();
-    const registered = JSON.parse(await readFile(join(dir, LINE), "utf8")).registered as Json;
-    await edit(PLANNED, (json) => {
-      json.state = "public";
-      json.registered = { ...registered, ezid_identifier: "doi:10.5072/FK2NEMAR.SAMPLE-SPEC.V2" };
-    });
-    const byHand = await judge();
-    expect(byHand.output).toContain(`${PLANNED_DOI} is public but was planned`);
-    expect(byHand.code).toBe(1);
-    const byTheRun = await judge("--allow-issue", PLANNED_DOI);
-    expect(byTheRun.code).toBe(0);
-    // The allowance names one DOI: it does not cover another.
-    const other = await judge("--allow-issue", "10.5072/fk2nemar.sample-spec.v7");
-    expect(other.code).toBe(1);
+  test("a planned record edited to public by hand is refused", async () => {
+    await baseRepo(plannedPair);
+    await issue(PLANNED, PLANNED_DOI);
+    const result = await judge();
+    expect(result.output).toContain(`${PLANNED_DOI} is public but was planned`);
+    expect(result.code).toBe(1);
+  });
+});
+
+describe("the mint run's allowance", () => {
+  const both = ["--allow-issue", NEXT_RELEASE_DOI, "--allow-issue", PLANNED_DOI];
+
+  test("a release and its own line may be issued, and only they", async () => {
+    await baseRepo(plannedPair);
+    await issue(NEXT_RELEASE, NEXT_RELEASE_DOI);
+    await issue(PLANNED, PLANNED_DOI);
+    const result = await judge(...both);
+    expect(result.output).toContain("2 registered record(s)");
+    expect(result.code).toBe(0);
   });
 
+  test("a release alone does not cover a line issued with it, and a line alone is refused", async () => {
+    await baseRepo(plannedPair);
+    await issue(NEXT_RELEASE, NEXT_RELEASE_DOI);
+    await issue(PLANNED, PLANNED_DOI);
+    const releaseOnly = await judge("--allow-issue", NEXT_RELEASE_DOI);
+    expect(releaseOnly.output).toContain(`${PLANNED_DOI} is public but was planned`);
+    expect(releaseOnly.code).toBe(1);
+    const lineOnly = await judge("--allow-issue", PLANNED_DOI);
+    expect(lineOnly.output).toContain("takes one release DOI");
+    expect(lineOnly.code).toBe(1);
+  });
+
+  test("a third DOI, a second release, or a line that is not the release's own is refused", async () => {
+    await baseRepo(plannedPair);
+    await issue(NEXT_RELEASE, NEXT_RELEASE_DOI);
+    await issue(PLANNED, PLANNED_DOI);
+    for (const extra of [
+      ["--allow-issue", "10.5072/fk2nemar.sample-spec.v3"],
+      ["--allow-issue", "10.5072/fk2nemar.sample-spec.v2.1.0"],
+    ]) {
+      const result = await judge(...both, ...extra);
+      expect(result.output).toContain("takes one release DOI");
+      expect(result.code).toBe(1);
+    }
+    const foreign = await judge(
+      "--allow-issue",
+      NEXT_RELEASE_DOI,
+      "--allow-issue",
+      "10.5072/fk2nemar.sample-spec.v3",
+    );
+    expect(foreign.output).toContain("takes one release DOI");
+    expect(foreign.code).toBe(1);
+    const malformed = await judge("--allow-issue", "not-a-doi");
+    expect(malformed.code).toBe(1);
+  });
+
+  test("a DOI that is absent at the base is refused", async () => {
+    await baseRepo(plannedPair);
+    const added = "registry/dois/fk2nemar.sample-spec.v3.0.0.json";
+    await cp(join(dir, NEXT_RELEASE), join(dir, added));
+    await edit(added, (json) => {
+      json.doi = "10.5072/fk2nemar.sample-spec.v3.0.0";
+      json.target = "https://doi-test.nemar.org/10.5072/fk2nemar.sample-spec.v3.0.0";
+    });
+    await issue(added, "10.5072/fk2nemar.sample-spec.v3.0.0");
+    const result = await judge("--allow-issue", "10.5072/fk2nemar.sample-spec.v3.0.0");
+    expect(result.output).toContain("must be planned in the base revision, not absent");
+    expect(result.code).toBe(1);
+  });
+
+  test("a DOI that is already issued at the base is refused", async () => {
+    await baseRepo(plannedPair);
+    const result = await judge("--allow-issue", RELEASE_DOI, "--allow-issue", LINE_DOI);
+    expect(result.output).toContain("must be planned in the base revision, not public");
+    expect(result.code).toBe(1);
+  });
+
+  test("a changed creator, target or note is refused, in the release or in the line", async () => {
+    const changes: [string, (json: Json) => void][] = [
+      [
+        NEXT_RELEASE,
+        (json) => {
+          const creators = (json.datacite as Json).creators as Json[];
+          creators[1] = { nameType: "Organizational", name: "Someone else" };
+        },
+      ],
+      [
+        PLANNED,
+        (json) => {
+          json.target = "https://evil.example/";
+        },
+      ],
+      [
+        PLANNED,
+        (json) => {
+          json.note = "slipped in with the mint";
+        },
+      ],
+    ];
+    for (const [path, change] of changes) {
+      await rm(dir, { recursive: true, force: true });
+      dir = await mkdtemp(join(tmpdir(), "nemar-doi-transitions-"));
+      await baseRepo(plannedPair);
+      await issue(NEXT_RELEASE, NEXT_RELEASE_DOI);
+      await issue(PLANNED, PLANNED_DOI);
+      await edit(path, change);
+      const result = await judge(...both);
+      expect(result.output).toContain("may change only state and registered");
+      expect(result.code).toBe(1);
+    }
+  });
+
+  test("another record issued beside an allowed pair is still refused", async () => {
+    await baseRepo(plannedPair);
+    await issue(NEXT_RELEASE, NEXT_RELEASE_DOI);
+    await issue(PLANNED, PLANNED_DOI);
+    await cp(join(dir, LINE), join(dir, "registry/dois/fk2nemar.sample-spec.v3.json"));
+    await edit("registry/dois/fk2nemar.sample-spec.v3.json", (json) => {
+      json.doi = "10.5072/fk2nemar.sample-spec.v3";
+      json.target = "https://doi-test.nemar.org/10.5072/fk2nemar.sample-spec.v3";
+    });
+    const result = await judge(...both);
+    expect(result.output).toContain("10.5072/fk2nemar.sample-spec.v3 is public");
+    expect(result.code).toBe(1);
+  });
+});
+
+describe("the transitions script, other changes", () => {
   test("a planned record can be added, changed and removed, and a public one withdrawn or amended", async () => {
     await baseRepo();
     await rm(join(dir, PLANNED));
