@@ -51,8 +51,27 @@ const httpsUrl = z.url({ protocol: /^https$/ });
 const date = z.iso.date();
 const dateTime = z.iso.datetime();
 
+/** ISO 7064 mod 11-2, the check character ORCID puts last in every iD. */
+export function orcidChecksumOk(id: string): boolean {
+  const digits = id.replaceAll("-", "");
+  let total = 0;
+  for (const char of digits.slice(0, 15)) total = (total + Number(char)) * 2;
+  const check = (12 - (total % 11)) % 11;
+  return digits[15] === (check === 10 ? "X" : String(check));
+}
+
+/** `owner/name` on GitHub; the name may not be `.` or `..`, so a path cannot escape the repository. */
+const repositorySlug = z
+  .string()
+  .regex(/^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/(?!\.{1,2}$)[A-Za-z0-9_.-]{1,100}$/);
+
 const orcid = z.strictObject({
-  nameIdentifier: z.string().regex(/^https:\/\/orcid\.org\/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/),
+  nameIdentifier: z
+    .string()
+    .regex(/^https:\/\/orcid\.org\/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/)
+    .refine((value) => orcidChecksumOk(value.slice("https://orcid.org/".length)), {
+      message: "the ORCID iD check character is wrong",
+    }),
   nameIdentifierScheme: z.literal("ORCID"),
   schemeUri: z.literal("https://orcid.org"),
 });
@@ -142,14 +161,14 @@ const datacite = z.strictObject({
 
 export const recordSchema = z.strictObject({
   schema_version: z.literal(1),
-  /** Lowercase, complete, and the only statement of the record's name, level and version. */
-  doi: text,
+  /** Lowercase, complete, and the only statement of the record's name, level and version. Not trimmed: whitespace is refused by the grammar, not silently removed. */
+  doi: z.string().min(1),
   state: z.enum(STATES),
-  /** Where the DOI resolves: the landing page EZID is given as `_target`. */
+  /** Where the DOI resolves: its own page on doi.nemar.org, which the registry checks (ADR 0007). */
   target: httpsUrl,
   /** The object the DOI names. A release pins the tag and the commit the tag points at. */
   source: z.strictObject({
-    repository: z.string().regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/),
+    repository: repositorySlug,
     tag: text.optional(),
     commit: z
       .string()
@@ -169,6 +188,11 @@ export const recordSchema = z.strictObject({
     .optional(),
   /** Present exactly when the state is `unavailable`. The DOI still resolves, to a tombstone. */
   unavailable: z.strictObject({ since: date, reason: text }).optional(),
+  /**
+   * The owner's marker that a withdrawn DOI is public again: required on the way from
+   * `unavailable` back to `public`, and different each time. Never on `planned` or `reserved`.
+   */
+  reinstated: z.strictObject({ on: date, reason: text }).optional(),
   note: text.optional(),
 });
 
@@ -183,7 +207,7 @@ export const namesSchema = z.strictObject({
       /** A regular expression over the name part of a suffix. */
       name_pattern: text,
       registry: text,
-      repository: z.string().regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/),
+      repository: repositorySlug,
       /** The public, anonymous endpoint the page lists this space from. */
       list_url: httpsUrl,
       note: text.optional(),
@@ -196,7 +220,7 @@ export const namesSchema = z.strictObject({
     z.strictObject({
       title: text,
       kind: z.enum(KINDS),
-      repository: z.string().regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/),
+      repository: repositorySlug,
     }),
   ),
 });

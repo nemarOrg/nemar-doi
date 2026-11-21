@@ -17,13 +17,20 @@ export const SHOULDERS = {
 
 export type Shoulder = keyof typeof SHOULDERS;
 
+/** The host of the landing page a DOI on each shoulder resolves to (ADR 0007; ADR 0006 for staging). */
+export const TARGET_HOSTS: Record<Shoulder, string> = {
+  production: "doi.nemar.org",
+  test: "doi-test.nemar.org",
+};
+
 /** Letters followed only by digits: `nm000103`, `on009081`, and any future prefix or width. */
 export const DATASET_SHAPED_NAME = /^[a-z]+[0-9]+$/;
 
 const NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const NAME_MIN_LENGTH = 3;
 const NAME_MAX_LENGTH = 32;
-const NUMBER = "(?:0|[1-9][0-9]*)";
+/** At most six digits, so a number is exact in JavaScript and never prints in exponent form. */
+const NUMBER = "(?:0|[1-9][0-9]{0,5})";
 const VERSION = new RegExp(`^(${NUMBER})(?:\\.(${NUMBER})\\.(${NUMBER}))?$`);
 
 /**
@@ -32,17 +39,36 @@ const VERSION = new RegExp(`^(${NUMBER})(?:\\.(${NUMBER})\\.(${NUMBER}))?$`);
  */
 export type Level = "work" | "line" | "release";
 
-export interface ParsedDoi {
+interface ParsedBase {
   doi: string;
   shoulder: Shoulder;
   /** The part after the DOI prefix and its slash, which is also the record's file name stem. */
   suffix: string;
   name: string;
-  level: Level;
-  major: number | null;
-  /** `3` for a line, `3.1.0` for a release, null for a work. */
-  version: string | null;
 }
+
+export interface ParsedWork extends ParsedBase {
+  level: "work";
+  major: null;
+  version: null;
+}
+
+export interface ParsedLine extends ParsedBase {
+  level: "line";
+  major: number;
+  /** `3`. */
+  version: string;
+}
+
+export interface ParsedRelease extends ParsedBase {
+  level: "release";
+  major: number;
+  /** `3.1.0`. */
+  version: string;
+}
+
+/** Discriminated on `level`, so a function that needs a release cannot be handed a work. */
+export type ParsedDoi = ParsedWork | ParsedLine | ParsedRelease;
 
 export type ParseResult = { ok: true; value: ParsedDoi } | { ok: false; error: string };
 
@@ -92,22 +118,21 @@ export function parseDoi(doi: string): ParseResult {
     };
   }
   const version = tail.slice(1);
+  const major = Number(match[1]);
+  const base = { doi, shoulder, suffix, name, major, version };
   return {
     ok: true,
-    value: {
-      doi,
-      shoulder,
-      suffix,
-      name,
-      level: match[2] === undefined ? "line" : "release",
-      major: Number(match[1]),
-      version,
-    },
+    value: match[2] === undefined ? { ...base, level: "line" } : { ...base, level: "release" },
   };
 }
 
+/** Where a DOI must resolve: its own page on the NEMAR landing site (ADR 0007). */
+export function targetFor(parsed: ParsedDoi): string {
+  return `https://${TARGET_HOSTS[parsed.shoulder]}/${parsed.doi}`;
+}
+
 /** The line a release belongs to: `…biosig-zarr.v3.1.0` gives `…biosig-zarr.v3`. */
-export function lineDoiOf(release: ParsedDoi): string {
+export function lineDoiOf(release: ParsedRelease): string {
   return `${SHOULDERS[release.shoulder]}${release.name}.v${release.major}`;
 }
 
