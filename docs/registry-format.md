@@ -49,6 +49,7 @@ The example is an illustration; no such DOI exists.
 | `datacite`       | The descriptive metadata, in DataCite's JSON spelling.                                                                                  |
 | `registered`     | What exists at EZID. Written by the mint run, present from `reserved` on, absent on a planned record.                                   |
 | `unavailable`    | `since` and `reason`. Present exactly when the state is `unavailable`.                                                                  |
+| `reinstated`     | `on` and `reason`. Present only on a registered record, and required to bring a withdrawn DOI back to `public`. Different each time.    |
 | `note`           | Free text for people. It is not sent to EZID.                                                                                           |
 
 ## The DataCite block
@@ -90,20 +91,28 @@ planned --> reserved --> public <--> unavailable
 | `public`      | resolves, findable in DataCite                 | permanent                                              |
 | `unavailable` | resolves to a tombstone                        | permanent, with a reason                               |
 
-From `reserved` on a record is never deleted or renamed, never returns to an earlier state, and never changes its `source`.
-Its `target` and its descriptive metadata can still be corrected by pull request.
-`bun run transitions <base>` compares the working tree with a base revision and fails on a change that breaks this; continuous integration runs it on every pull request.
+From `reserved` on a record is never deleted, renamed or moved to another file, never returns to an earlier state, and never changes its `source`, its `target`, or when it was first registered (`reserved_at`, `public_at` and `ezid_identifier` are written once).
+Its descriptive metadata can still be corrected by pull request.
+A withdrawn DOI is `public` again only with a new `reinstated` block (`on` and `reason`), which only the owner should approve.
+A record enters the registry as `planned`: one that arrives already `reserved` or `public`, or is edited to that by hand, is refused.
+Only the mint run's own result may issue a record.
+`bun run transitions <base>` compares the working tree with a base revision, reading the base records leniently so a stricter schema cannot lock out an old one, and fails on a change that breaks this.
+Continuous integration runs it on every pull request and on every push to `main`.
 
 ## What the validator checks
 
 `bun run validate` reads the registry and fails on any of these, each with the file and the reason:
 
-- a file that is not the name table or a record under `dois/`;
+- a file that is not `names.json`, `README.md` or `dois/<suffix>.json`, in whatever spelling (`x.JSON` and `x.json.txt` are refused);
+- a `target` that is not the DOI's own page, `https://doi.nemar.org/<doi>` (`https://doi-test.nemar.org/<doi>` on the test shoulder): no other host, no credentials, no query;
 - a record whose file name is not its suffix, whose DOI is not on the production shoulder, or whose DOI does not follow the grammar;
 - a dataset-shaped name, a reserved name, or a name inside a delegated space;
 - a name that is not declared, a `source.repository` that is not the name's repository, or a resource type that does not follow from its kind;
 - a DOI with no version part;
 - a release without its line in the registry, or registered before its line;
+- a line registered without a release of it that is ready (ADR 0003: a line is registered with its first release);
+- a release whose `source.tag` is not its version, written `1.2.0` or `v1.2.0`;
+- an ORCID iD whose check character is wrong, or a `source.repository` that is not `owner/name`;
 - a line that names a tag or a commit;
 - a planned record with a `registered` block, or a record past `planned` without one or without the metadata a mint needs;
 - an `unavailable` block that does not match the state.

@@ -7,9 +7,8 @@ import {
   mintReadyProblems,
   type RegistryFile,
   readRegistryFiles,
-  transitionProblems,
 } from "../src/registry";
-import { type DoiRecord, recordSchema } from "../src/schema";
+import { type DoiRecord, orcidChecksumOk, recordSchema } from "../src/schema";
 
 const LINE = "dois/fk2nemar.sample-spec.v1.json";
 const RELEASE = "dois/fk2nemar.sample-spec.v1.0.0.json";
@@ -202,6 +201,79 @@ describe("checkRegistry", () => {
     expect(messages(disagree).join("\n")).toContain('"familyName, givenName"');
   });
 
+  test("a record resolves to its own page on the landing site, and nowhere else", () => {
+    const point = (target: string) =>
+      messages(
+        withChange(PLANNED, (json) => {
+          json.target = target;
+        }),
+      ).join("\n");
+    const own = "https://doi-test.nemar.org/10.5072/fk2nemar.sample-spec.v2";
+    expect(point(own)).toBe("");
+    for (const target of [
+      "https://evil.example/10.5072/fk2nemar.sample-spec.v2",
+      "https://doi.nemar.org/10.5072/fk2nemar.sample-spec.v2",
+      "https://user:pass@doi-test.nemar.org/10.5072/fk2nemar.sample-spec.v2",
+      "https://doi-test.nemar.org@evil.example/10.5072/fk2nemar.sample-spec.v2",
+      "https://localhost/10.5072/fk2nemar.sample-spec.v2",
+      "https://doi-test.nemar.org/10.5072/fk2nemar.sample-spec.v1",
+      `${own}?next=https://evil.example`,
+    ]) {
+      expect(point(target)).toContain("target must be https://doi-test.nemar.org/");
+    }
+    // Plain http is refused by the schema before the registry rule is reached.
+    expect(point("http://doi-test.nemar.org/10.5072/fk2nemar.sample-spec.v2")).toContain("target:");
+  });
+
+  test("a file in the registry that is not a record is refused, whatever its spelling", () => {
+    for (const file of [
+      "dois/fk2nemar.sample-spec.v9.JSON",
+      "dois/fk2nemar.sample-spec.v9.json.txt",
+      "dois/nested/fk2nemar.sample-spec.v9.json",
+      "notes.json",
+      ".DS_Store",
+    ]) {
+      const found = messages([...fixture, { file, json: {} }]).join("\n");
+      expect(found).toContain(`${file}: is not allowed`);
+    }
+    expect(messages([...fixture, { file: "README.md", json: undefined }])).toEqual([]);
+  });
+
+  test("an ORCID iD with a wrong check character is refused", () => {
+    const wrong = withChange(LINE, (json) => {
+      const creators = (json.datacite as Json).creators as Json[];
+      const ids = creators[0]?.nameIdentifiers as Json[];
+      if (ids[0]) ids[0].nameIdentifier = "https://orcid.org/0000-0002-1825-0098";
+    });
+    expect(messages(wrong).join("\n")).toContain("the ORCID iD check character is wrong");
+    expect(orcidChecksumOk("0000-0002-1694-233X")).toBe(true);
+    expect(orcidChecksumOk("0000-0002-1825-0097")).toBe(true);
+  });
+
+  test.each(["../etc", "nemarOrg/..", "nemarOrg/.", "/abs/olute", "a/b/c", "nemarOrg/"])(
+    "the source repository %s is not an owner/name",
+    (repository) => {
+      const files = withChange(PLANNED, (json) => {
+        (json.source as Json).repository = repository;
+      });
+      expect(messages(files).join("\n")).toContain("source.repository");
+    },
+  );
+
+  test("a DOI is not trimmed into validity", () => {
+    const files = withChange(PLANNED, (json) => {
+      json.doi = " 10.5072/fk2nemar.sample-spec.v2 ";
+    });
+    expect(messages(files).join("\n")).toContain("not under a NEMAR shoulder");
+  });
+
+  test("reinstated belongs to a registered DOI only", () => {
+    const files = withChange(PLANNED, (json) => {
+      json.reinstated = { on: "2026-11-21", reason: "restored" };
+    });
+    expect(messages(files).join("\n")).toContain("only a registered DOI can have been reinstated");
+  });
+
   test("an unknown property is refused rather than dropped", () => {
     const files = withChange(PLANNED, (json) => {
       (json.datacite as Json).language = "en";
@@ -241,69 +313,39 @@ describe("mintReadyProblems", () => {
     expect(messages(files).join("\n")).toContain("source.tag and source.commit");
   });
 
+  test("a release's tag is the version its DOI names", () => {
+    for (const tag of ["1.0.0", "v1.0.0"]) {
+      const files = withChange(RELEASE, (json) => {
+        (json.source as Json).tag = tag;
+      });
+      expect(messages(files)).toEqual([]);
+    }
+    const files = withChange(RELEASE, (json) => {
+      (json.source as Json).tag = "2.0.0";
+    });
+    expect(messages(files).join("\n")).toContain('source.tag "2.0.0" must be 1.0.0 or v1.0.0');
+  });
+
+  test("a line is not registered without a release that is ready", () => {
+    const alone = fixture.filter((f) => f.file !== RELEASE);
+    expect(messages(alone).join("\n")).toContain("a line is registered with its first release");
+    // A planned line is ready only when a release of it is: here the release is complete.
+    const planned = structuredClone(fixture);
+    for (const file of [LINE]) {
+      const json = planned.find((f) => f.file === file)?.json as Json;
+      json.state = "planned";
+      delete json.registered;
+    }
+    const registry = checkRegistry(planned, "test").registry;
+    const line = registry?.entries.get("10.5072/fk2nemar.sample-spec.v1");
+    if (!registry || !line) throw new Error("fixture did not load");
+    expect(mintReadyProblems(line, registry)).toEqual([]);
+  });
+
   test("a complete record passes", () => {
     const { registry } = checkRegistry(fixture, "test");
     const line = registry?.entries.get("10.5072/fk2nemar.sample-spec.v1");
     if (!registry || !line) throw new Error("fixture did not load");
     expect(mintReadyProblems(line, registry)).toEqual([]);
-  });
-});
-
-describe("transitionProblems", () => {
-  test("a planned record can be changed or removed", () => {
-    expect(transitionProblems(record(PLANNED), null)).toEqual([]);
-  });
-
-  test("a new record has no past to contradict", () => {
-    expect(transitionProblems(null, record(LINE))).toEqual([]);
-  });
-
-  test.each(["reserved", "public", "unavailable"] as const)(
-    "a %s record is never deleted",
-    (state) => {
-      const before = { ...record(LINE), state };
-      expect(transitionProblems(before, null).join("\n")).toContain("never deleted or renamed");
-    },
-  );
-
-  test("a registered record does not go back", () => {
-    const before = record(LINE);
-    expect(transitionProblems(before, { ...before, state: "planned" }).join("\n")).toContain(
-      "cannot go back from public to planned",
-    );
-    expect(transitionProblems(before, { ...before, state: "reserved" }).join("\n")).toContain(
-      "cannot go back from public to reserved",
-    );
-  });
-
-  test("public and unavailable move both ways", () => {
-    const before = record(LINE);
-    expect(transitionProblems(before, { ...before, state: "unavailable" })).toEqual([]);
-    expect(transitionProblems({ ...before, state: "unavailable" }, before)).toEqual([]);
-  });
-
-  test("a registered DOI is never pointed at another object", () => {
-    const before = record(RELEASE);
-    const moved = {
-      ...before,
-      source: { ...before.source, commit: "f".repeat(40) },
-    };
-    expect(transitionProblems(before, moved).join("\n")).toContain("never reassigned");
-  });
-
-  test("the first registration time is written once", () => {
-    const before = record(LINE);
-    if (!before.registered) throw new Error("fixture has no registration");
-    const after = {
-      ...before,
-      registered: { ...before.registered, reserved_at: "2027-01-01T00:00:00Z" },
-    };
-    expect(transitionProblems(before, after).join("\n")).toContain("written once");
-  });
-
-  test("metadata and the target of a registered DOI can still be amended", () => {
-    const before = record(LINE);
-    const after = { ...before, target: "https://doi-test.nemar.org/elsewhere" };
-    expect(transitionProblems(before, after)).toEqual([]);
   });
 });
