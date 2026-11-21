@@ -24,10 +24,10 @@ The facts this plan was built on are in [`research.md`](research.md).
 ### Phase 0: design and initialization
 
 - [x] Repository created, initialized, licensed MIT
-- [x] ADRs 0001 to 0007, the documents in `docs/`, the hard rules in `AGENTS.md`
+- [x] ADRs 0001 to 0008, the documents in `docs/`, the hard rules in `AGENTS.md`
 - [x] The grammar, the record schema and the registry rules, with tests
 - [x] The registry seeded with the planned records
-- [x] The owner reviews the first pull request and answers the decisions below (2026-11-21)
+- [ ] The owner reviews and merges the first pull request (the decisions below were answered on 2026-11-21)
 
 ### Phase 1: settle the design
 

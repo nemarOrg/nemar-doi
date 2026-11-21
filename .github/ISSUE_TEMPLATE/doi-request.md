@@ -16,7 +16,7 @@ Dataset DOIs are not requested here; they come from publishing a dataset through
 
 **Is the name new?** (a new name needs the owner's approval)
 
-**Creators** (each person by given and family name with an ORCID iD where they have one, or an organization):
+**Creators** (the people named in the `CITATION.cff` of the source repository at the tagged commit, each by given and family name with an ORCID iD where they have one; an organization only where no person can be named):
 
 **Title, publication year, one-paragraph abstract, license:**
 

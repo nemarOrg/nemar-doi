@@ -57,16 +57,22 @@ OWNER_ID=$(gh api user -q .id)
 gh api -X PUT repos/nemarOrg/nemar-doi/environments/ezid-production --input - <<JSON
 {
   "reviewers": [{ "type": "User", "id": ${OWNER_ID} }],
-  "deployment_branch_policy": { "protected_branches": true, "custom_branch_policies": false }
+  "deployment_branch_policy": { "protected_branches": false, "custom_branch_policies": true }
 }
 JSON
+
+# Limit the environment to the branch main by name: a ruleset may not count as branch protection.
+gh api -X POST repos/nemarOrg/nemar-doi/environments/ezid-production/deployment-branch-policies \
+  -f name=main -f type=branch
 
 gh secret set EZID_USERNAME --env ezid-production --repo nemarOrg/nemar-doi
 gh secret set EZID_PASSWORD --env ezid-production --repo nemarOrg/nemar-doi
 ```
 
-The environment makes every mint run wait for the owner's approval and limits it to the protected branch.
-The rehearsal on the EZID test shoulder (`10.5072/fk2nemar.`) uses the same credential and needs no protection; it goes in a second environment, `ezid-test`, the same way, when phase 3 needs it.
+The environment makes every mint run wait for the owner's approval and limits it to the branch `main`.
+The rehearsal on the EZID test shoulder (`10.5072/fk2nemar.`) uses a second environment, `ezid-test`, created the same way when phase 3 needs it.
+It holds only EZID's test-account credentials, which EZID publishes in its documentation for the test shoulder `10.5072/FK2`.
+**Never put the production credential in `ezid-test`**, and never a test credential in `ezid-production`: the two environments are what keep a rehearsal away from the production shoulder (ADR 0006, ADR 0008).
 
 ## 3. Deploy the page (phase 2, after its pull request merges)
 

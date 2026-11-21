@@ -15,7 +15,8 @@ The owner decided on 2026-11-21 that there is no separate EZID user.
 
 - **There is one credential.** nemar-doi uses the same EZID credential as nemar-cli.
   It is stored as the secrets `EZID_USERNAME` and `EZID_PASSWORD` in a protected GitHub environment of this repository named `ezid-production`, whose runs the owner approves (ADR 0005).
-  No other job, branch or environment can read it.
+  No other job, branch or environment can read it, and the environment is limited to the branch `main`.
+  The rehearsal environment `ezid-test` holds only EZID's published test-account credentials for the test shoulder `10.5072/FK2`, never the production credential.
 - **The split is a policy, enforced in code on each side.**
   nemar-cli mints only dataset suffixes, `nemar.nm…` and `nemar.on…`, and refuses any other suffix before it calls EZID.
   nemar-doi mints every other suffix under the shoulder, and its validator refuses a dataset-shaped name (`DATASET_SHAPED_NAME`, ADR 0002), so the mint run cannot create or touch a dataset suffix.
