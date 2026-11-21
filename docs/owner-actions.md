@@ -44,25 +44,11 @@ JSON
 
 The reviewer of a request must not be its author (Architecture Decision Record (ADR) 0005), so the team needs at least two people who can review.
 
-## 2. Ask EZID for a separate user (before phase 3)
+## 2. Store the credential (before phase 3)
 
-EZID lets an identifier be updated only by the user that owns it, by a proxy of that user, or by an administrator of its group.
-A second user is therefore a real boundary: a fault in this repository could not rewrite a dataset Digital Object Identifier (DOI).
-
-1. Write to EZID support through `https://ezid.cdlib.org/contact` and ask for:
-   - a second user in NEMAR's EZID group (suggested name `nemar-registry`), allowed to create identifiers on the shoulder `doi:10.82901/NEMAR.`;
-   - that user to be neither a group administrator nor a proxy of the existing user;
-   - confirmation that it then cannot update or delete identifiers the existing user owns.
-2. In the same message, repeat the open request about the DataCite client (nemarOrg/website#288):
-   a client of NEMAR's own for the prefix `10.82901`, or at least the re3data identifier `10.17616/R31NJN95` on the shared client `cdl.ucsd`.
-   Every DOI from this registry inherits the same "Unknown Repository" attribution until that is fixed.
-3. If EZID cannot provide a second user, say so in an issue here.
-   The fallback in ADR 0005 is to mint through nemar-cli's backend, and that is a design change, not a workaround.
-
-## 3. Store the credential (before phase 3)
-
-Keep the new user's name and password in Infisical, in a folder of its own for nemar-doi.
-Then create the protected environment and give it the two secrets.
+There is no separate EZID user and nothing to request from EZID (Architecture Decision Record (ADR) 0008).
+NEMAR already holds the one credential for the shoulder `10.82901/nemar.`; this repository uses it, in a protected environment whose runs you approve.
+Create the environment, then put the existing credential in it.
 `gh secret set` prompts for the value; never put a value on the command line or in a file in this repository.
 
 ```bash
@@ -80,9 +66,9 @@ gh secret set EZID_PASSWORD --env ezid-production --repo nemarOrg/nemar-doi
 ```
 
 The environment makes every mint run wait for the owner's approval and limits it to the protected branch.
-The EZID test account needs no protection; it goes in a second environment, `ezid-test`, the same way, when the rehearsal in phase 3 needs it.
+The rehearsal on the EZID test shoulder (`10.5072/fk2nemar.`) uses the same credential and needs no protection; it goes in a second environment, `ezid-test`, the same way, when phase 3 needs it.
 
-## 4. Deploy the page (phase 2, after its pull request merges)
+## 3. Deploy the page (phase 2, after its pull request merges)
 
 Measured on 2026-11-20: `doi.nemar.org` has no DNS record, and the `nemar.org` zone is served by Cloudflare.
 The Worker's configuration will declare both names as custom domains, so the first deploy creates the DNS record and the certificate.
@@ -104,7 +90,10 @@ curl -sI https://doi.nemar.org/ | head -1               # expect 200
 `bun run build` and the Worker configuration do not exist yet; phase 2 adds them.
 Do not mint anything until the production page answers.
 
-## 5. Approve each mint (phase 4)
+After the first deploy, a workflow deploys the page on a merge to `main`, with a Cloudflare token limited to this one Worker.
+Phase 2 adds that workflow and the exact steps to create the token; it holds no EZID credential.
+
+## 4. Approve each mint (phase 4)
 
 For each DOI, after its request has merged and its page is live:
 
@@ -117,8 +106,9 @@ Approve the run when GitHub asks, watch it finish, check that `https://doi.org/<
 then review and merge the pull request the run opens.
 `mint.yml` does not exist yet; phase 3 adds it.
 
-## 6. In nemar-cli
+## 5. In nemar-cli
 
 - Record the delegation there (a short ADR or a line in its documentation that names ADR 0001 of this repository).
 - Add the public `/dois` listing described in [`delegation.md`](delegation.md).
-- Add a test that every suffix nemar-cli can mint is dataset-shaped.
+- Refuse to mint any suffix that is not `nemar.nm…` or `nemar.on…`, before EZID is called, with a test that fails if the guard is removed (nemar-cli issue 2281).
+  This is the nemar-cli half of the split in ADR 0008.
