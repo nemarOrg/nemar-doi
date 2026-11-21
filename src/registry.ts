@@ -3,7 +3,6 @@
  * Pure functions over parsed files, so the same checks run on the working tree,
  * on a base revision, and on a registry built in a test.
  */
-import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
   ezidIdentifier,
@@ -12,6 +11,7 @@ import {
   type ParsedDoi,
   parseDoi,
   type Shoulder,
+  targetFor,
 } from "./doi";
 import {
   type DoiRecord,
@@ -24,6 +24,8 @@ import {
 
 export const NAMES_FILE = "names.json";
 export const RECORDS_DIR = "dois";
+/** The only files in the registry besides the records: a hand-written note beside the data. */
+export const README_FILE = "README.md";
 
 export interface Finding {
   file: string;
@@ -33,6 +35,7 @@ export interface Finding {
 export interface RegistryFile {
   /** Path relative to the registry root, with forward slashes. */
   file: string;
+  /** The parsed content of a `.json` file; undefined for any other file, which is never read as data. */
   json: unknown;
 }
 
@@ -56,6 +59,11 @@ export function isIssued(state: State): boolean {
   return RANK[state] >= RANK.reserved;
 }
 
+/** How far a state is from `planned`, for the rule that a record never goes back. */
+export function stateRank(state: State): number {
+  return RANK[state];
+}
+
 function issues(error: { issues: { path: PropertyKey[]; message: string }[] }): string[] {
   return error.issues.map((issue) => {
     const path = issue.path.map(String).join(".");
@@ -63,12 +71,8 @@ function issues(error: { issues: { path: PropertyKey[]; message: string }[] }): 
   });
 }
 
-/**
- * What stops a record from being minted (nemar-cli ADR 0018, applied here by ADR 0005).
- * A record past `planned` must pass it too, so a record cannot be edited into a state
- * its metadata never earned.
- */
-export function mintReadyProblems(entry: Entry, registry: Registry): string[] {
+/** What the record itself must say before it is an identifier, whatever else is in the registry. */
+function metadataProblems(entry: Entry): string[] {
   const { record, parsed } = entry;
   const problems: string[] = [];
   const { datacite } = record;
@@ -84,9 +88,41 @@ export function mintReadyProblems(entry: Entry, registry: Registry): string[] {
     if (!record.source.tag || !record.source.commit) {
       problems.push("a release names its source.tag and source.commit before minting");
     }
+    if (record.source.tag && ![parsed.version, `v${parsed.version}`].includes(record.source.tag)) {
+      problems.push(
+        `source.tag "${record.source.tag}" must be ${parsed.version} or v${parsed.version}, the version this DOI names`,
+      );
+    }
+  }
+  return problems;
+}
+
+/**
+ * What stops a record from being minted (nemar-cli ADR 0018, applied here by ADR 0005).
+ * A record past `planned` must pass it too, so a record cannot be edited into a state
+ * its metadata never earned.
+ */
+export function mintReadyProblems(entry: Entry, registry: Registry): string[] {
+  const { parsed } = entry;
+  const problems = metadataProblems(entry);
+  if (parsed.level === "release") {
     const line = registry.entries.get(lineDoiOf(parsed));
     if (line && !isIssued(line.record.state)) {
       problems.push(`its line ${line.record.doi} must be registered first`);
+    }
+  }
+  if (parsed.level === "line") {
+    // ADR 0003: a line is registered together with its first release, never alone.
+    const firstRelease = [...registry.entries.values()].some(
+      (other) =>
+        other.parsed.level === "release" &&
+        lineDoiOf(other.parsed) === parsed.doi &&
+        (isIssued(other.record.state) || metadataProblems(other).length === 0),
+    );
+    if (!firstRelease) {
+      problems.push(
+        "a line is registered with its first release: no release record of it is ready",
+      );
     }
   }
   return problems;
@@ -100,6 +136,9 @@ function checkEntry(entry: Entry, registry: Registry): string[] {
   }
   if (parsed.level === "work") {
     problems.push("a DOI needs a version part: the bare name is reserved and not issued");
+  }
+  if (record.target !== targetFor(parsed)) {
+    problems.push(`target must be ${targetFor(parsed)}, the DOI's own page (ADR 0007)`);
   }
   const name = registry.names.names[parsed.name];
   if (!name) {
@@ -141,6 +180,9 @@ function checkEntry(entry: Entry, registry: Registry): string[] {
   }
   if ((state === "unavailable") !== (unavailable !== undefined)) {
     problems.push("the unavailable block is present exactly when the state is unavailable");
+  }
+  if (record.reinstated && !isIssued(state)) {
+    problems.push("only a registered DOI can have been reinstated");
   }
   return problems;
 }
@@ -195,9 +237,12 @@ export function checkRegistry(
 
   const registry: Registry = { names: names.data, entries: new Map() };
   for (const { file, json } of files) {
-    if (file === NAMES_FILE) continue;
-    if (!file.startsWith(`${RECORDS_DIR}/`) || !file.endsWith(".json")) {
-      findings.push({ file, message: `is not ${NAMES_FILE} or a record under ${RECORDS_DIR}/` });
+    if (file === NAMES_FILE || file === README_FILE) continue;
+    if (!/^dois\/[^/]+\.json$/.test(file)) {
+      findings.push({
+        file,
+        message: `is not allowed: only ${NAMES_FILE}, ${README_FILE} and ${RECORDS_DIR}/<suffix>.json belong in the registry`,
+      });
       continue;
     }
     const record = recordSchema.safeParse(json);
@@ -229,38 +274,17 @@ export function checkRegistry(
   return { registry, findings };
 }
 
-/**
- * What a change may not do to a record that already existed (ADR 0004).
- * `before` and `after` are the same DOI at the base revision and in the change;
- * null means the record is absent on that side.
- */
-export function transitionProblems(before: DoiRecord | null, after: DoiRecord | null): string[] {
-  if (!before || !isIssued(before.state)) return [];
-  if (!after) {
-    return [`${before.doi} is ${before.state} at EZID: its record is never deleted or renamed`];
-  }
-  const problems: string[] = [];
-  if (RANK[after.state] < RANK[before.state]) {
-    problems.push(`${before.doi} cannot go back from ${before.state} to ${after.state}`);
-  }
-  if (after.registered?.reserved_at !== before.registered?.reserved_at) {
-    problems.push(`${before.doi}: registered.reserved_at is written once`);
-  }
-  if (
-    after.source.repository !== before.source.repository ||
-    after.source.tag !== before.source.tag ||
-    after.source.commit !== before.source.commit
-  ) {
-    problems.push(`${before.doi} is never reassigned: its source cannot change once registered`);
-  }
-  return problems;
-}
-
-/** Read every JSON file under a registry root from disk. */
+/** Read every file under a registry root from disk: `.json` files are parsed, others are only listed. */
 export async function readRegistryFiles(root: string): Promise<RegistryFile[]> {
-  const paths = (await readdir(root, { recursive: true })).map((p) => p.replaceAll("\\", "/"));
+  const paths = await Array.fromAsync(
+    new Bun.Glob("**/*").scan({ cwd: root, dot: true, onlyFiles: true }),
+  );
   const files: RegistryFile[] = [];
-  for (const file of paths.filter((p) => p.endsWith(".json")).sort()) {
+  for (const file of paths.map((p) => p.replaceAll("\\", "/")).sort()) {
+    if (!file.endsWith(".json")) {
+      files.push({ file, json: undefined });
+      continue;
+    }
     let json: unknown;
     try {
       json = await Bun.file(join(root, file)).json();
