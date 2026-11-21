@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { ezidIdentifier, lineDoiOf, nameProblem, parseDoi } from "../src/doi";
+import { ezidIdentifier, lineDoiOf, nameProblem, parseDoi, targetFor } from "../src/doi";
 
 function parsed(doi: string) {
   const result = parseDoi(doi);
@@ -28,7 +28,7 @@ describe("parseDoi", () => {
 
   test("a release sits under its line", () => {
     const release = parsed("10.82901/nemar.biosig-zarr.v3.10.2");
-    expect(release.level).toBe("release");
+    if (release.level !== "release") throw new Error("not a release");
     expect(release.major).toBe(3);
     expect(release.version).toBe("3.10.2");
     expect(lineDoiOf(release)).toBe("10.82901/nemar.biosig-zarr.v3");
@@ -99,6 +99,28 @@ describe("nameProblem", () => {
   test.each(["ab", "x".repeat(33), "nm000103", "on1", "abc123"])("%s is not", (name) => {
     expect(nameProblem(name)).not.toBeNull();
   });
+});
+
+test("a version number is exact: at most six digits", () => {
+  expect(parsed("10.82901/nemar.process.v999999.999999.999999").version).toBe(
+    "999999.999999.999999",
+  );
+  for (const doi of [
+    "10.82901/nemar.process.v1000000",
+    "10.82901/nemar.process.v1.0.1000000",
+    "10.82901/nemar.process.v99999999999999999999999",
+  ]) {
+    expect(refusal(doi)).toContain(".v<major>");
+  }
+});
+
+test("a target is the DOI's own page on the landing site of its shoulder", () => {
+  expect(targetFor(parsed("10.82901/nemar.process.v0"))).toBe(
+    "https://doi.nemar.org/10.82901/nemar.process.v0",
+  );
+  expect(targetFor(parsed("10.5072/fk2nemar.process.v0.1.0"))).toBe(
+    "https://doi-test.nemar.org/10.5072/fk2nemar.process.v0.1.0",
+  );
 });
 
 test("the EZID identifier is the uppercase DOI behind a scheme", () => {
