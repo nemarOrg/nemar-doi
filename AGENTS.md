@@ -55,6 +55,7 @@ The page reads dataset DOIs live from nemar-cli's public interface.
 
 Not Zenodo, and not DataCite directly (nemar-cli ADR 0007).
 A change made on the strength of Zenodo's or DataCite Fabrica's way of doing things is wrong here.
+NEMAR has one EZID credential, shared with nemar-cli and kept in the protected environment `ezid-production` (ADR 0008): nothing is requested from EZID, and the dataset guard above is the only thing between this registry and a dataset suffix.
 
 ### No secrets, no deploys, no domain changes
 

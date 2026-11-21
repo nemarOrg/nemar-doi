@@ -66,8 +66,9 @@ Until that endpoint exists the page uses the catalog call above.
 
 - **nemar-doi** never issues a dataset-shaped suffix, never stores a dataset DOI,
   and never asks EZID about a dataset DOI with its own credential.
-- **nemar-cli** keeps minting only dataset-shaped suffixes, and keeps the listing public and filtered.
-  A test there that pins the shape of every suffix it can mint, naming ADR 0002 of this repository, makes the promise mechanical.
+- **nemar-cli** mints only dataset suffixes (`nemar.nm…` and `nemar.on…`), refuses any other suffix before it calls EZID, and keeps the listing public and filtered.
+  A test there that pins that shape, naming ADR 0002 and ADR 0008 of this repository, makes the promise mechanical (nemar-cli issue 2281).
+  Both sides use the one EZID credential NEMAR holds, so these two guards are the boundary (ADR 0008).
 - **A new kind of DOI** is decided here.
   If it names a dataset it is nemar-cli's; otherwise it gets a name in this registry.
 

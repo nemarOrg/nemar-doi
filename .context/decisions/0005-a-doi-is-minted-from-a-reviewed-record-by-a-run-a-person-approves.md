@@ -38,10 +38,8 @@ No code in this repository contacts EZID yet.
   That is the intended price of a permanent identifier at this volume.
 - Between the mint and the merge of the pull request that records it, EZID and the registry disagree.
   The mint is safe to run again, and a read-only reconcile reports the difference; it repairs nothing.
-- This repository will hold an EZID credential.
-  It must not be the account that owns the dataset DOIs, or a fault here could rewrite them:
-  EZID lets an identifier be updated only by its owner, so a separate EZID user is a real boundary
-  (see the owner actions in [`docs/owner-actions.md`](../../docs/owner-actions.md)).
+- This repository will use the one EZID credential NEMAR already holds, in a protected environment.
+  The boundary between dataset DOIs and the rest is a policy enforced in code on both sides, not a second EZID user (ADR 0008).
 - A source repository cannot get a DOI by tagging a release.
   Its maintainer asks, after the tag exists.
 
@@ -55,8 +53,8 @@ No code in this repository contacts EZID yet.
 - **The automated judge nemar-cli uses for datasets:** it exists because of import volume, which this registry does not have.
   Rejected in favor of a person.
 - **Mint through nemar-cli's backend, which already holds EZID credentials:** it keeps one credential in one place,
-  and it ties every non-dataset DOI to a nemar-cli release.
-  Kept as the fallback if EZID cannot provide a separate user.
+  but it ties every non-dataset DOI to a nemar-cli release.
+  Rejected in favor of a run in this repository that the owner approves (ADR 0008).
 
 ## Receipts
 
