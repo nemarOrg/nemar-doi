@@ -1,7 +1,7 @@
 # ADR 0002: A DOI suffix is `nemar.<name>.v<version>`, and a dataset-shaped name is never issued here
 
-**Status:** proposed
-**Date:** 2026-11-20
+**Status:** accepted
+**Date:** 2026-11-21
 **Owner:** Seyed Yahya Shirazi
 
 ## Context
@@ -32,8 +32,8 @@ The grammar is implemented once, in [`src/doi.ts`](../../src/doi.ts), and descri
 
 - The two registries cannot collide, and neither has to ask the other before minting:
   every dataset suffix is dataset-shaped and no suffix issued here is.
-- nemar-cli must keep minting only dataset-shaped suffixes.
-  Today that follows from its code (`buildConceptIdentifier`), and it should pin it with a test that names this ADR.
+- nemar-cli must mint only dataset suffixes, `nemar.nm…` and `nemar.on…`, and refuse any other suffix before it calls EZID (ADR 0008).
+  Today that follows from its code (`buildConceptIdentifier`); nemar-cli issue 2281 asks for the guard and a test that names this ADR.
 - Some reasonable names are refused: `eeg2` is dataset-shaped, so it would have to be `eeg-2`.
 - The name is in every citation for good.
   It cannot follow a repository that is renamed, which is why a name is short, says what the thing is, and is approved by the owner.

@@ -1,7 +1,7 @@
 # ADR 0003: A major line is the concept DOI and each release is a version DOI
 
-**Status:** proposed
-**Date:** 2026-11-20
+**Status:** accepted
+**Date:** 2026-11-21
 **Owner:** Seyed Yahya Shirazi
 
 ## Context

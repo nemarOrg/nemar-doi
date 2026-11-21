@@ -1,7 +1,7 @@
 # ADR 0007: doi.nemar.org is a read-only view of the registry and the landing page of non-dataset DOIs
 
-**Status:** proposed
-**Date:** 2026-11-20
+**Status:** accepted
+**Date:** 2026-11-21
 **Owner:** Seyed Yahya Shirazi
 
 ## Context
