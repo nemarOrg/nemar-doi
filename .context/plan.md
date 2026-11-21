@@ -48,7 +48,7 @@ Gate: every address in [`docs/page.md`](../docs/page.md) answers as written, in 
 - [ ] DataCite Extensible Markup Language (XML) built from a record, with the derived version relations, checked against DataCite's own schema
 - [ ] An EZID client: create as reserved, read back, compare, make public; never delete; safe to run again
 - [ ] A rehearsal on the EZID test shoulder, end to end, including a release that updates its line
-- [ ] `mint.yml`: started by a person, one DOI, in the protected environment (owner action 2)
+- [ ] `mint.yml`: started by a person, one DOI, in the protected environment (owner action 2); it uses a dedicated GitHub App identity, a same-repository branch and one verified commit authored by the App, and it runs `transitions --allow-issue` itself (CI never allows issuance)
 - [ ] A read-only reconcile of the registry against EZID
 
 Gate: the rehearsal passes, and a second reviewer has read the client for the ways a request to EZID can be corrupted.

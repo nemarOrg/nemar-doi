@@ -25,8 +25,8 @@ Steps 4 to 6 describe a tool that is planned ([`.context/plan.md`](../.context/p
    The format is in [`registry-format.md`](registry-format.md).
 3. **Review.**
    Continuous integration runs `bun run validate` and `bun run transitions`.
-   `transitions` also refuses a record that arrives already `reserved` or `public`, or is edited to that state by hand:
-   only the mint run's own result may issue a record (it passes `--allow-issue <doi>`; see below).
+   `transitions` also refuses a record that arrives already `reserved` or `public`, or is edited to that state by hand.
+   **Continuous integration never allows issuance**, on a pull request or on a push to `main`: it does not pass `--allow-issue`, so a change that issues a record always fails there.
    The reviewer checks what a machine cannot (the list below), then the pull request is merged.
    Merging mints nothing.
 4. **Check that the record is ready.**
@@ -41,9 +41,12 @@ Steps 4 to 6 describe a tool that is planned ([`.context/plan.md`](../.context/p
    5. makes it public: `POST /id/...` with `_status: public`;
    6. for a release, re-sends the document of its line and of the release before it, which now gain a relation.
 6. **Record the result.**
-   The run opens a pull request from the branch `mint/<suffix>` that sets the record to `public` and writes its `registered` block.
-   Continuous integration lets that one DOI move from `planned` to issued only when the pull request comes from that branch and from `github-actions[bot]`,
-   or, after the merge, when the commit subject is `Mint <doi>`.
+   The mint workflow writes the record's `registered` block and sets its state; nothing else may change in the record.
+   The mint workflow does not exist yet and is to be designed with the minting tool (phase 3):
+   it will use a dedicated GitHub App identity, work on a branch of this repository (not a fork), and push one verified commit authored by that App.
+   It runs `bun run transitions <base> --allow-issue <doi>` itself, before it pushes, and pushes through its own path;
+   the flag accepts one release DOI and that release's own line DOI, each `planned` at the base and unchanged in every field except `state` and `registered`.
+   Until that workflow exists, nothing can be issued, and the first mint waits for it.
    The reviewer merges it after confirming that `https://doi.org/<doi>` resolves to the record's page.
 
 ## What the reviewer checks
